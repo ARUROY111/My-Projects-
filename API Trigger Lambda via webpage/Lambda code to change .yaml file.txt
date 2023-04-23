@@ -1,1 +1,62 @@
+import boto3
+import ruamel.yaml
+  
+def lambda_handler(event, context): 
+     
+    book_start_date = event['book_start_date']
+    book_end_date = event['book_end_date']
+    s3_base_path = event['s3_base_path']
+    folder = event['folder'] # either 'live' or 'base'
+    print(book_start_date)
+    print(book_end_date)
+    print(s3_base_path)
+    print(folder)
+    selection = folder
+    # Get the globals.yaml file path and repo/branch names based on the user's selection
+    if selection.lower() == 'live':
+        file_path = 'Conf/live/globals.yml'
+        branch_name = 'master'
+    elif selection.lower() == 'base':
+        file_path = 'Conf/base/globals.yml'
+        branch_name = 'master'
+    else:
+         return {
+            'statusCode': 400,
+            'body': f"Invalid selection: {selection}. Please enter 'Live' or 'Base'."
+       }
+  #print(file_path)
 
+
+    # Initialize CodeCommit client
+    codecommit = boto3.client('codecommit')
+
+
+    # Update the globals.yaml file with user-defined values
+    file = codecommit.get_file(
+        # repositoryName='UserInterface',
+        # branchName=branch_name,
+        # filePath=file_path
+          repositoryName='Userinterface',  
+          commitSpecifier=branch_name,
+          filePath=file_path
+    )
+    content = ruamel.yaml.round_trip_load(file['fileContent'])
+    content['book_start_date'] = book_start_date
+    content['book_end_date'] = book_end_date
+    content['s3_base_path'] = s3_base_path
+    codecommit.put_file(
+        repositoryName='Userinterface',
+        branchName=branch_name,
+        fileContent=ruamel.yaml.round_trip_dump(content),
+        filePath=file_path,
+        fileMode='NORMAL',
+        parentCommitId=codecommit.get_branch(
+            repositoryName='Userinterface',
+            branchName=branch_name
+        )['branch']['commitId']
+   )
+
+    return {
+        'statusCode': 200,
+        'body': f"Globals.yaml file under '{selection}' updated successfully!"
+    }
