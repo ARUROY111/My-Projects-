@@ -1,1 +1,51 @@
+import boto3
 
+def lambda_handler(event, context):
+    # Initialize the EC2 client
+    ec2_client = boto3.client('ec2')
+    instance_type = 't2.micro'
+    ami_id = 'ami-0578f2b35d0328762' # for Amazon Linux 2 in us-east-1 region
+    min_count = 1
+    max_count = 1
+
+    instances = ec2_client.describe_instances()
+    current_count = len(instances['Reservations'])
+
+    count = current_count + 1
+ 
+
+    instance_name = f'EC2_Instance_{count}'
+
+
+    response = ec2_client.run_instances(
+        ImageId=ami_id,
+        InstanceType=instance_type,
+        MinCount=min_count,
+        MaxCount=max_count,
+        TagSpecifications=[
+           {
+                'ResourceType': 'instance',
+                'Tags': [
+                    {
+                        'Key': 'Name',
+                        'Value': instance_name
+                     },
+               ]
+           },
+       ]
+    )
+
+
+    instance_id = response['Instances'][0]['InstanceId']
+    resp = {
+    "statusCode": 200,
+    "headers": {
+       "Access-Control-Allow-Origin": "*",
+    },
+    "body": "EC2 instance created"
+    }
+
+    return {
+        'statusCode': 200,
+        'body': f'New EC2 instance created with ID {instance_id} and name {instance_name}',
+        }
