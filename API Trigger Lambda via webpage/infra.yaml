@@ -1,0 +1,207 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  primer:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.9
+      Description: For_Page_input_in_Lambdafunction
+      FunctionName: lambdaForPage
+      Role: arn:aws:iam::472008891536:role/s3acc
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+          import boto3
+          import ruamel.yaml
+
+
+          # define the handler function that the Lambda service will use as an entry point
+          def lambda_handler(event, context):
+              Book_start_date = event['Book_start_date']
+              Book_end_date = event['Book_end_date']
+              s3_base_path = event['s3_base_path']
+              selection = event['options']
+              Branch_s = event['Branch']
+              print(Book_start_date)
+              print(Book_end_date)
+              print(s3_base_path)
+              print(selection)
+              print(Branch_s)
+
+              # Get the globals.yaml file path and repo/branch names based on the user's selection
+              if selection.lower() == 'live':
+                  file_path = 'Conf/live/globals.yml'
+                  branch_name = 'master'
+              elif selection.lower() == 'base':
+                  file_path = 'Conf/base/globals.yml'
+                  branch_name = 'master'
+              else:
+                  return {
+                      'statusCode': 400,
+                      'body': f"Invalid selection: {selection}. Please enter 'Live' or 'Base'."
+                  }
+              # print(file_path)
+              # Initialize CodeCommit client
+              codecommit = boto3.client('codecommit')
+              # Update the globals.yaml file with user-defined values
+              file = codecommit.get_file(
+                  # repositoryName='UserInterface',
+                  # branchName=branch_name,
+                  # filePath=file_path
+                  repositoryName='userone',
+                  commitSpecifier=branch_name,
+                  filePath=file_path
+              )
+              content = ruamel.yaml.round_trip_load(file['fileContent'])
+              content['Book_start_date'] = Book_start_date
+              content['Book_end_date'] = Book_end_date
+              content['s3_base_path'] = s3_base_path
+              codecommit.put_file(
+                  repositoryName='userone',
+                  branchName=Branch_s,
+                  fileContent=ruamel.yaml.round_trip_dump(content),
+                  filePath=file_path,
+                  fileMode='NORMAL',
+                  parentCommitId=codecommit.get_branch(repositoryName='userone', branchName=Branch_s)['branch']['commitId']
+              )
+              return {
+                  'statusCode': 200,
+                  'body': f"Globals.yaml file under '{selection}' updated successfully!"
+              }
+      Layers:
+        - !Ref MyLayer1
+        
+  MyLayer1:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: MyLayer1
+      Description: My custom layer 1
+      Content:
+        S3Bucket: ssopy
+        S3Key: python.zip
+      CompatibleRuntimes:
+        - python3.9
+
+  MyApi1:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: fstApi1
+  
+  MyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MyApi1
+      ParentId: !GetAtt MyApi1.RootResourceId
+      PathPart: myresource
+
+  MyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MyApi1
+      ResourceId: !Ref MyResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:472008891536:function:${primer.Arn}/invocations"
+      MethodResponses:
+      - StatusCode: 200
+          
+  lambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: For_EC2_creation_in_Lambdafunction
+      FunctionName: new_web_Ec2
+      Handler: index.lambda_handler
+      Role: arn:aws:iam::472008891536:role/s3acc
+      Runtime: python3.9
+      Timeout: 5
+
+      Code:
+        ZipFile: |
+              import boto3
+
+              def lambda_handler(event, context):
+                  # Initialize the EC2 client
+                  ec2_client = boto3.client('ec2')
+                  instance_type = 't2.micro'
+                  ami_id = 'ami-0fc61db8544a617ed' # for Amazon Linux 2 in us-east-1 region
+                  min_count = 1
+                  max_count = 1
+
+                  instances = ec2_client.describe_instances()
+                  current_count = len(instances['Reservations'])
+
+                  count = current_count + 1
+
+
+                  instance_name = f'EC2_Instance_{count}'
+
+                  response = ec2_client.run_instances(
+                      ImageId=ami_id,
+                      InstanceType=instance_type,
+                      MinCount=min_count,
+                      MaxCount=max_count,
+                      TagSpecifications=[
+                          {
+                              'ResourceType': 'instance',
+                              'Tags': [
+                                  {
+                                      'Key': 'Name',
+                                      'Value': instance_name
+                                  },
+                              ]
+                          },
+                      ]
+                  )
+
+                  instance_id = response['Instances'][0]['InstanceId']
+                  resp = {
+                  "statusCode": 200,
+                  "headers": {
+                      "Access-Control-Allow-Origin": "*",
+                  },
+                  "body": "EC2 instance created"
+                  }
+
+                  return {
+                      'statusCode': 200,
+                      'body': f'New EC2 instance created with ID {instance_id} and name {instance_name}',
+                      }
+
+  MyApi2:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: fstApi2
+
+  MyResource2:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MyApi2
+      ParentId: !GetAtt MyApi2.RootResourceId
+      PathPart: myresource2
+
+  MyMethod2:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MyApi2
+      ResourceId: !Ref MyResource2
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:472008891536:function:${lambdaFunction.Arn}/invocations"
+      MethodResponses:
+      - StatusCode: 200
+# Outputs:
+#   MyApiEndpoint:
+#     Value: !Sub "https://fstApi1.execute-api.us-east-1.amazonaws.com/prod/myresource"
+#     Description: URL of the API endpointS
+# Outputs1:
+#   MyApiEndpoint:
+#     Value: !Sub "https://fstApi2.execute-api.us-east-1.amazonaws.com/prod/myresource"
+#     Description: URL_of_the_API_endpoint
+
+
+
