@@ -1,1 +1,18 @@
+resource "aws_sqs_queue" "this" {
+  name                      = "awsforge-poc-queue"
+  delay_seconds             = 0
+  max_message_size          = 262144
+  message_retention_seconds = 86400
+  receive_wait_time_seconds = 10
 
+  tags = {
+    Project     = "AWSForgePOC"
+    Environment = "POC"
+    ManagedBy   = "AWSForge"
+    CreatedBy   = "AWSForgeMCP"
+  }
+}
+
+output "sqs_queue_arn" {
+  value = aws_sqs_queue.this.arn
+}
