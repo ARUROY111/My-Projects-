@@ -1,1 +1,29 @@
+resource "random_id" "lambda_suffix" {
+  byte_length = 4
+}
 
+resource "aws_lambda_function" "this" {
+  filename      = "lambda_function_payload.zip" # Staged by planner or dummy file
+  function_name = "awsforge-poc-lambda-${random_id.lambda_suffix.hex}"
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "index.handler"
+  runtime       = "python3.11"
+  timeout       = 15
+
+  environment {
+    variables = {
+      ENV = "POC"
+    }
+  }
+
+  tags = {
+    Project     = "AWSForgePOC"
+    Environment = "POC"
+    ManagedBy   = "AWSForge"
+    CreatedBy   = "AWSForgeMCP"
+  }
+}
+
+output "lambda_arn" {
+  value = aws_lambda_function.this.arn
+}
