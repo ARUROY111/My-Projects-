@@ -1,1 +1,14 @@
+resource "aws_sns_topic" "this" {
+  name = "awsforge-poc-topic"
 
+  tags = {
+    Project     = "AWSForgePOC"
+    Environment = "POC"
+    ManagedBy   = "AWSForge"
+    CreatedBy   = "AWSForgeMCP"
+  }
+}
+
+output "sns_topic_arn" {
+  value = aws_sns_topic.this.arn
+}
