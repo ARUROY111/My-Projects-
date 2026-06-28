@@ -3,9 +3,17 @@ set -e
 
 echo "🚀 Starting AWSForge MCP setup..."
 
-# 1. Update and install system dependencies
+# 1. Create 4GB Swap for AI Memory
+echo "🧠 Allocating 4GB Swap Space..."
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+# 1.1 Update and install system dependencies (Forcing Python 3.12)
 sudo apt-get update && sudo apt-get upgrade -y
-sudo apt-get install -y python3.11 python3.11-venv python3-pip git curl unzip nginx tmux jq software-properties-common
+sudo apt-get install -y python3.12 python3.12-venv python3.12-dev python3-pip git curl unzip nginx tmux jq software-properties-common
 
 # 2. Install Terraform
 echo "📦 Installing Terraform..."
@@ -19,23 +27,24 @@ echo "🦙 Installing Ollama..."
 curl -fsSL https://ollama.com/install.sh | sh
 sudo systemctl start ollama
 # Pull model in background so we don't block setup
-nohup ollama run mistral > /dev/null 2>&1 &
-echo "Ollama is pulling mistral in the background."
+nohup ollama run phi3 > /dev/null 2>&1 &
+echo "Ollama is pulling phi3 in the background."
 
-# 4. Create project structure
+# 4. Create project structure and move files
 PROJECT_DIR="/opt/awsforge"
 sudo mkdir -p $PROJECT_DIR
+# Safely copy ALL files (including hidden ones) from current folder to /opt/awsforge
+echo "📂 Copying repository files to $PROJECT_DIR..."
+sudo cp -a "$PWD/." "$PROJECT_DIR/"
 sudo chown -R $USER:$USER $PROJECT_DIR
 cd $PROJECT_DIR
-
-# Assuming files are copied here via git clone prior to running this script
 # Create necessary subdirectories
 mkdir -p workspaces logs terraform_templates ui mcp_server/tools bootstrap
 chmod 700 workspaces
 
 # 5. Python Virtual Environment
 echo "🐍 Setting up Python environment..."
-python3.11 -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
 if [ -f "requirements.txt" ]; then
@@ -59,13 +68,18 @@ server {
     listen 80;
     server_name _;
     
-    location / {
-        proxy_pass http://127.0.0.0:8000;
+location / {
+        proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
+
+        # 10-Minute Timeout Fix
+        proxy_read_timeout 600;
+        proxy_connect_timeout 600;
+        proxy_send_timeout 600;
     }
 }
 EOF'
@@ -83,15 +97,17 @@ After=network.target
 [Service]
 User=$USER
 WorkingDirectory=$PROJECT_DIR
-ExecStart=$PROJECT_DIR/venv/bin/uvicorn mcp_server.main:app --host 0.0.0.0 --port 8000
-Restart=always
+Environment="PYTHONPATH=$PROJECT_DIR/mcp_server"
 EnvironmentFile=$PROJECT_DIR/.env
+ExecStart=$PROJECT_DIR/venv/bin/uvicorn mcp_server.main:app --host 127.0.0.1 --port 8000
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
 EOF"
 sudo systemctl daemon-reload
 sudo systemctl enable awsforge.service
+sudo systemctl start awsforge.service
 
 # 9. Apply Bootstrap (AWS Budgets)
 echo "💰 Setting up AWS Budgets Bootstrap..."
@@ -113,6 +129,11 @@ cd ..
 
 # 10. Make Kill Switch Executable
 chmod +x nuke.sh
+
+# Fix Database and Folder Permissions (CRITICAL)
+echo "🔒 Setting final permissions..."
+sudo chown -R $USER:$USER /opt/awsforge
+sudo chmod -R 775 /opt/awsforge
 
 IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 || echo "localhost")
 echo "✅ Setup Complete!"

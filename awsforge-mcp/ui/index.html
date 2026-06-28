@@ -147,43 +147,54 @@
 
         async function sendChat() {
             const input = document.getElementById('chat-input');
+            const btn = document.querySelector('.input-area button'); // Select the send button
             const text = input.value.trim();
             if(!text) return;
-            
+        
+            // Disable inputs to prevent spam-clicking gridlock
+            input.disabled = true;
+            btn.disabled = true;
+        
             appendMessage(text, true);
             input.value = '';
-            
+        
             const typingDiv = document.createElement('div');
             typingDiv.className = 'msg msg-bot';
             typingDiv.innerText = '⚙️ Generating HCL...';
             typingDiv.id = 'typing-indicator';
             document.getElementById('chat-history').appendChild(typingDiv);
-            
-            const res = await fetch('/chat', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({session_id: sessionId, message: text})
-            });
-            const data = await res.json();
-            
-            document.getElementById('typing-indicator').remove();
-            
-            if(data.warnings && data.warnings.length > 0) {
-                appendMessage(data.warnings.join('\n'));
+        
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({session_id: sessionId, message: text})
+                });
+                const data = await res.json();
+        
+                document.getElementById('typing-indicator').remove();
+        
+                if(data.warnings && data.warnings.length > 0) {
+                    appendMessage(data.warnings.join('\n'));
+                }
+        
+                appendMessage(`Cost Estimate: ${data.estimated_cost}\n\nReview the HCL and Plan output, then approve or reject.`);
+        
+                document.getElementById('hcl-display').innerText = data.hcl;
+                Prism.highlightElement(document.getElementById('hcl-display'));
+                switchTab('hcl');
+        
+                streamOutput(`/plan/${sessionId}`, () => {
+                    document.getElementById('approval-bar').style.display = 'flex';
+                    switchTab('output');
+                });
+            } finally {
+                // Re-enable inputs when finished or if it fails
+                input.disabled = false;
+                btn.disabled = false;
+                input.focus();
             }
-            
-            appendMessage(`Cost Estimate: ${data.estimated_cost}\n\nReview the HCL and Plan output, then approve or reject.`);
-            
-            document.getElementById('hcl-display').innerText = data.hcl;
-            Prism.highlightElement(document.getElementById('hcl-display'));
-            switchTab('hcl');
-            
-            streamOutput(`/plan/${sessionId}`, () => {
-                document.getElementById('approval-bar').style.display = 'flex';
-                switchTab('output');
-            });
         }
-
         async function handleConfirm(approved) {
             document.getElementById('approval-bar').style.display = 'none';
             await fetch('/confirm', {
