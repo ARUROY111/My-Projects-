@@ -3,6 +3,7 @@ import subprocess
 import json
 import shutil
 import hashlib
+import zipfile
 from typing import Generator
 from config import settings
 from state_db import log_audit, save_resources
