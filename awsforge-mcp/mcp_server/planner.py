@@ -48,7 +48,7 @@ async def call_llm(prompt: str) -> str:
         return response.content[0].text
     else:
         # Ollama local fallback
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=None) as client:
             response = await client.post(
                 f"{settings.OLLAMA_HOST}/api/generate",
                 json={
