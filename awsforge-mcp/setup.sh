@@ -76,6 +76,10 @@ location / {
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
 
+        # Disable Buffering for Live Terminal Streaming (SSE)
+        proxy_buffering off;
+        proxy_cache off;
+
         # 10-Minute Timeout Fix
         proxy_read_timeout 600;
         proxy_connect_timeout 600;
