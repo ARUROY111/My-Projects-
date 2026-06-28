@@ -56,8 +56,8 @@ async def chat_endpoint(req: ChatRequest):
         return plan_data
 
     # Terraform Init & Write
-    init_workspace(req.session_id)
     write_tf_files(req.session_id, plan_data["hcl"])
+    init_workspace(req.session_id)
     
     # --- NEW VALIDATION BLOCK START ---
     val_result = run_validate(req.session_id)
