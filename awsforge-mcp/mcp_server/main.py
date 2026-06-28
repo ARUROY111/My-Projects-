@@ -48,7 +48,7 @@ async def chat_endpoint(req: ChatRequest):
     update_session_status(req.session_id, "planning")
     
     # Generate HCL via LLM Planner
-    history = [] # In a production system, fetch from DB. For POC, passing empty context.
+    history = [] 
     plan_data = await generate_plan(req.message, history)
     
     if not plan_data["hcl"]:
@@ -58,6 +58,16 @@ async def chat_endpoint(req: ChatRequest):
     # Terraform Init & Write
     init_workspace(req.session_id)
     write_tf_files(req.session_id, plan_data["hcl"])
+    
+    # --- NEW VALIDATION BLOCK START ---
+    val_result = run_validate(req.session_id)
+    if not val_result["valid"]:
+        cleanup_workspace(req.session_id)
+        update_session_status(req.session_id, "failed")
+        plan_data["warnings"].append(f"⚠️ Terraform Validation Failed: {val_result['errors']}")
+        plan_data["hcl"] = "Validation failed. Workspace cleaned."
+        return plan_data
+    # --- NEW VALIDATION BLOCK END ---
     
     update_session_status(req.session_id, "awaiting_approval")
     return plan_data
