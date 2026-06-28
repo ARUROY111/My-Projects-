@@ -11,7 +11,7 @@ import uuid
 from config import settings
 from state_db import get_session_status, get_all_resources, update_session_status
 from planner import generate_plan
-from terraform_engine import init_workspace, write_tf_files, run_plan, run_apply, run_destroy, run_nuke, cleanup_workspace
+from terraform_engine import init_workspace, write_tf_files, run_plan, run_apply, run_destroy, run_nuke, cleanup_workspace, run_validate
 
 app = FastAPI(title="AWSForge MCP Server")
 
