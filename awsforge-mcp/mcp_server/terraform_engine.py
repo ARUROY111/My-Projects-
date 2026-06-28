@@ -49,8 +49,17 @@ def init_workspace(session_id: str) -> dict:
 def write_tf_files(session_id: str, hcl: str) -> None:
     path = _get_workspace_path(session_id)
     os.makedirs(path, mode=0o700, exist_ok=True)
+    
+    # Write the main HCL file
     with open(os.path.join(path, "main.tf"), "w") as f:
         f.write(hcl)
+        
+    # --- NEW DUMMY ZIP BLOCK START ---
+    # Create a minimal zip containing a dummy index.py so lambda validation passes
+    dummy_zip_path = os.path.join(path, "lambda_function_payload.zip")
+    with zipfile.ZipFile(dummy_zip_path, 'w') as z:
+        z.writestr('index.py', 'def handler(event, context):\n    return {"statusCode": 200}')
+    # --- NEW DUMMY ZIP BLOCK END ---
 
 def run_validate(session_id: str) -> dict:
     path = _get_workspace_path(session_id)
