@@ -207,6 +207,7 @@
                 btn.disabled = false;
                 input.focus();
             }
+         } 
         async function handleConfirm(approved) {
             document.getElementById('approval-bar').style.display = 'none';
             await fetch('/confirm', {
