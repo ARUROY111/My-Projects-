@@ -42,6 +42,12 @@ cd $PROJECT_DIR
 mkdir -p workspaces logs terraform_templates ui mcp_server/tools bootstrap
 chmod 700 workspaces
 
+#To check env file exists or not
+if [ ! -f ".env" ]; then
+    echo "⚠️ .env not found. Copying .env.example..."
+    cp .env.example .env
+fi
+
 # 5. Python Virtual Environment
 echo "🐍 Setting up Python environment..."
 python3.12 -m venv venv
@@ -115,10 +121,6 @@ sudo systemctl start awsforge.service
 
 # 9. Apply Bootstrap (AWS Budgets)
 echo "💰 Setting up AWS Budgets Bootstrap..."
-if [ ! -f ".env" ]; then
-    echo "⚠️ .env not found. Copying .env.example..."
-    cp .env.example .env
-fi
 
 source .env
 if [ -z "$ALERT_EMAIL" ]; then
