@@ -1,0 +1,21 @@
+# NOTE: MWAA environments take ~25-30 mins to provision and carry a baseline cost.
+resource "aws_mwaa_environment" "this" {
+  name               = "awsforge-poc-mwaa"
+  airflow_version    = "2.6.3"
+  environment_class  = "mw1.small"
+  execution_role_arn = aws_iam_role.mwaa_execution.arn
+  source_bucket_arn  = aws_s3_bucket.this.arn
+  dag_s3_path        = "dags"
+
+  network_configuration {
+    security_group_ids = [aws_security_group.mwaa.id]
+    subnet_ids         = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+  }
+
+  tags = {
+    Project     = "AWSForgePOC"
+    Environment = "POC"
+    ManagedBy   = "AWSForge"
+    CreatedBy   = "AWSForgeMCP"
+  }
+}

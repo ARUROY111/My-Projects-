@@ -1,0 +1,23 @@
+resource "aws_glue_job" "this" {
+  name         = "awsforge-poc-glue-job"
+  role_arn     = aws_iam_role.glue_service.arn
+  glue_version = "4.0"
+  worker_type  = "G.1X"
+  number_of_workers = 2
+
+  command {
+    script_location = "s3://${aws_s3_bucket.this.bucket}/scripts/etl_script.py"
+    python_version  = "3"
+  }
+
+  default_arguments = {
+    "--job-bookmark-option" = "job-bookmark-disable"
+  }
+
+  tags = {
+    Project     = "AWSForgePOC"
+    Environment = "POC"
+    ManagedBy   = "AWSForge"
+    CreatedBy   = "AWSForgeMCP"
+  }
+}

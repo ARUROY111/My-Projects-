@@ -1,0 +1,29 @@
+resource "aws_redshiftserverless_namespace" "this" {
+  namespace_name      = "awsforge-poc-namespace"
+  admin_username      = "awsforgeadmin"
+  admin_user_password = "SecurePassword123!" # Change in production
+
+  tags = {
+    Project     = "AWSForgePOC"
+    Environment = "POC"
+    ManagedBy   = "AWSForge"
+    CreatedBy   = "AWSForgeMCP"
+  }
+}
+
+resource "aws_redshiftserverless_workgroup" "this" {
+  workgroup_name = "awsforge-poc-workgroup"
+  namespace_name = aws_redshiftserverless_namespace.this.namespace_name
+  base_capacity  = 8
+
+  tags = {
+    Project     = "AWSForgePOC"
+    Environment = "POC"
+    ManagedBy   = "AWSForge"
+    CreatedBy   = "AWSForgeMCP"
+  }
+}
+
+output "redshift_endpoint" {
+  value = aws_redshiftserverless_workgroup.this.endpoint
+}
