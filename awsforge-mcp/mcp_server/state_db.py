@@ -6,7 +6,10 @@ import os
 
 def get_db():
     os.makedirs(os.path.dirname(settings.DB_PATH) or '.', exist_ok=True)
-    conn = sqlite3.connect(settings.DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(settings.DB_PATH, check_same_thread=False, timeout=15.0)
+    # Enable WAL mode for high concurrency
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA synchronous=NORMAL;")
     conn.row_factory = sqlite3.Row
     return conn
 

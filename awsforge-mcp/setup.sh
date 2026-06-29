@@ -42,6 +42,12 @@ cd $PROJECT_DIR
 mkdir -p workspaces logs terraform_templates ui mcp_server/tools bootstrap
 chmod 700 workspaces
 
+#To check env file exists or not
+if [ ! -f ".env" ]; then
+    echo "⚠️ .env not found. Copying .env.example..."
+    cp .env.example .env
+fi
+
 # 5. Python Virtual Environment
 echo "🐍 Setting up Python environment..."
 python3.12 -m venv venv
@@ -68,18 +74,31 @@ server {
     listen 80;
     server_name _;
     
-location / {
+    location / {
         proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
+        proxy_buffering off;
+        proxy_cache off;
+    }
 
-        # 10-Minute Timeout Fix
-        proxy_read_timeout 600;
-        proxy_connect_timeout 600;
-        proxy_send_timeout 600;
+    # Explicitly protect the heavy AI endpoint
+    location /chat {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        
+        # Disable buffering so streaming isn't cached
+        proxy_buffering off;
+        
+        # Extend connection limits to 15 minutes
+        proxy_read_timeout 900;
+        proxy_connect_timeout 900;
+        proxy_send_timeout 900;
     }
 }
 EOF'
@@ -111,10 +130,6 @@ sudo systemctl start awsforge.service
 
 # 9. Apply Bootstrap (AWS Budgets)
 echo "💰 Setting up AWS Budgets Bootstrap..."
-if [ ! -f ".env" ]; then
-    echo "⚠️ .env not found. Copying .env.example..."
-    cp .env.example .env
-fi
 
 source .env
 if [ -z "$ALERT_EMAIL" ]; then

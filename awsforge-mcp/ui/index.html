@@ -164,14 +164,19 @@
             typingDiv.id = 'typing-indicator';
             document.getElementById('chat-history').appendChild(typingDiv);
         
-            try {
+        try {
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({session_id: sessionId, message: text})
                 });
+                
+                // Catch bad HTTP responses (like 500 or 504 errors)
+                if (!res.ok) {
+                    throw new Error(`Server responded with status: ${res.status}`);
+                }
+                
                 const data = await res.json();
-        
                 document.getElementById('typing-indicator').remove();
         
                 if(data.warnings && data.warnings.length > 0) {
@@ -188,13 +193,21 @@
                     document.getElementById('approval-bar').style.display = 'flex';
                     switchTab('output');
                 });
+                
+            } catch (error) {
+                // Remove the loading text and show the error in the chat
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) indicator.remove();
+                
+                appendMessage(`⚠️ Network or Server Error: ${error.message}`);
+                console.error("Chat Error:", error);
             } finally {
                 // Re-enable inputs when finished or if it fails
                 input.disabled = false;
                 btn.disabled = false;
                 input.focus();
             }
-        }
+         } 
         async function handleConfirm(approved) {
             document.getElementById('approval-bar').style.display = 'none';
             await fetch('/confirm', {
