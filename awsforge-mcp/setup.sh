@@ -74,22 +74,31 @@ server {
     listen 80;
     server_name _;
     
-location / {
+    location / {
         proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
-
-        # Disable Buffering for Live Terminal Streaming (SSE)
         proxy_buffering off;
         proxy_cache off;
+    }
 
-        # 10-Minute Timeout Fix
-        proxy_read_timeout 600;
-        proxy_connect_timeout 600;
-        proxy_send_timeout 600;
+    # Explicitly protect the heavy AI endpoint
+    location /chat {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        
+        # Disable buffering so streaming isn't cached
+        proxy_buffering off;
+        
+        # Extend connection limits to 15 minutes
+        proxy_read_timeout 900;
+        proxy_connect_timeout 900;
+        proxy_send_timeout 900;
     }
 }
 EOF'
