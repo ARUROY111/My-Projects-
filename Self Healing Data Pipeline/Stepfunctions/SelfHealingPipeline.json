@@ -1,0 +1,42 @@
+{
+  "Comment": "Self-Healing Pipeline POC",
+  "StartAt": "ProcessDataFile",
+  "States": {
+    "ProcessDataFile": {
+      "Type": "Task",
+      "Resource": "YOUR_DATA_PROCESSOR_ARN",
+      "Parameters": {
+        "detail": {
+          "bucket": { "name.$": "$.detail.bucket.name" },
+          "object": { "key.$": "$.detail.object.key" }
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["RuntimeError", "Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 3,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["InvalidDataException"],
+          "ResultPath": "$.errorInfo",
+          "Next": "RouteToQuarantine"
+        }
+      ],
+      "End": true
+    },
+    "RouteToQuarantine": {
+      "Type": "Task",
+      "Resource": "YOUR_QUARANTINE_ARN",
+      "Parameters": {
+        "bucket.$": "$.detail.bucket.name",
+        "key.$": "$.detail.object.key",
+        "error.$": "$.errorInfo.Cause"
+      },
+      "End": true
+    }
+  }
+}
