@@ -78,7 +78,7 @@ EOF
 
 # 7. Setup Nginx Reverse Proxy
 echo "🌐 Configuring Nginx..."
-sudo bash -c 'cat > /etc/nginx/sites-available/awsforge <<EOF
+sudo tee /etc/nginx/sites-available/awsforge > /dev/null << 'EOF'
 server {
     listen 80;
     server_name _;
@@ -86,10 +86,10 @@ server {
     location / {
         proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
         proxy_buffering off;
         proxy_cache off;
     }
@@ -98,8 +98,8 @@ server {
     location /chat {
         proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
         
         # Disable buffering so streaming isn't cached
         proxy_buffering off;
@@ -110,7 +110,8 @@ server {
         proxy_send_timeout 900;
     }
 }
-EOF'
+EOF
+
 sudo ln -sf /etc/nginx/sites-available/awsforge /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo systemctl restart nginx
