@@ -3,8 +3,11 @@
     "Statement": [
         {
             "Effect": "Allow",
-            "Action": ["s3:GetObject"],
-            "Resource": "arn:aws:s3:::my-healing-pipeline-bucket-*/*"
+            "Action": ["s3:GetObject", "s3:ListBucket"],
+            "Resource": [
+                "arn:aws:s3:::my-healing-pipeline-bucket-aru/*",
+                "arn:aws:s3:::my-healing-pipeline-bucket-aru"
+            ]
         },
         {
             "Effect": "Allow",
