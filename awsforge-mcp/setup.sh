@@ -5,11 +5,15 @@ echo "🚀 Starting AWSForge MCP setup..."
 
 # 1. Create 4GB Swap for AI Memory
 echo "🧠 Allocating 4GB Swap Space..."
-sudo fallocate -l 4G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+if [ ! -f /swapfile ]; then
+    sudo fallocate -l 4G /swapfile
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile
+    sudo swapon /swapfile
+    echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+else
+    echo "✅ Swapfile already exists. Skipping allocation."
+fi
 
 # 1.1 Update and install system dependencies (Forcing Python 3.12)
 sudo apt-get update && sudo apt-get upgrade -y
