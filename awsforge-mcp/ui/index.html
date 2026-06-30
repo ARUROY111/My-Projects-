@@ -131,10 +131,19 @@
         document.getElementById('session-display').innerText = `ID: ${sessionId}`;
 
         function switchTab(tabName) {
+            // 1. Remove active states from all tabs and content blocks
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            event.target.classList.add('active');
+            
+            // 2. Activate the correct content block
             document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            // 3. Find and activate the correct tab safely (no event.target needed)
+            document.querySelectorAll('.tab').forEach(tab => {
+                if (tab.getAttribute('onclick').includes(tabName)) {
+                    tab.classList.add('active');
+                }
+            });
         }
 
         function appendMessage(text, isUser=false) {
