@@ -13,7 +13,12 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 # 1.1 Update and install system dependencies (Forcing Python 3.12)
 sudo apt-get update && sudo apt-get upgrade -y
-sudo apt-get install -y python3.12 python3.12-venv python3.12-dev python3-pip git curl unzip nginx tmux jq software-properties-common
+sudo apt-get install -y software-properties-common
+# --- ADD THIS LINE TO FIX THE PYTHON 404 ---
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+sudo apt-get update
+# --------------------------------------------
+sudo apt-get install -y python3.12 python3.12-venv python3.12-dev python3-pip git curl unzip nginx tmux jq
 
 # 2. Install Terraform
 echo "📦 Installing Terraform..."
