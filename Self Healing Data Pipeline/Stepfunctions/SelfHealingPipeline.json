@@ -1,5 +1,5 @@
 {
-  "Comment": "Self-Healing Pipeline POC",
+  "Comment": "Self-Healing Pipeline - Production Version",
   "StartAt": "ProcessDataFile",
   "States": {
     "ProcessDataFile": {
@@ -7,13 +7,22 @@
       "Resource": "YOUR_DATA_PROCESSOR_ARN",
       "Parameters": {
         "detail": {
-          "bucket": { "name.$": "$.detail.bucket.name" },
-          "object": { "key.$": "$.detail.object.key" }
+          "bucket": {
+            "name.$": "$.detail.bucket.name"
+          },
+          "object": {
+            "key.$": "$.detail.object.key"
+          }
         }
       },
       "Retry": [
         {
-          "ErrorEquals": ["RuntimeError", "Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "ErrorEquals": [
+            "RuntimeError",
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
           "IntervalSeconds": 3,
           "MaxAttempts": 2,
           "BackoffRate": 2.0
@@ -21,7 +30,9 @@
       ],
       "Catch": [
         {
-          "ErrorEquals": ["InvalidDataException"],
+          "ErrorEquals": [
+            "InvalidDataException"
+          ],
           "ResultPath": "$.errorInfo",
           "Next": "RouteToQuarantine"
         }
